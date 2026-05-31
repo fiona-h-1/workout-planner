@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trait &amp; Train — Personality-Based Workout Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4ede1;
+    --paper-2:#efe6d6;
+    --ink:#231f1b;
+    --ink-soft:#5b554c;
+    --clay:#c8553d;
+    --clay-deep:#a8402c;
+    --olive:#4d5d3f;
+    --olive-soft:#6f8059;
+    --line:#d8cdb8;
+    --card:#fbf7ef;
+    --shadow:0 1px 0 #fff6, 0 18px 40px -22px #2a241c66;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #fbf3e3 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #efe4cf 0%, transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Hanken Grotesk", sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:32px 22px 80px;}
+
+  header.brand{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px;}
+  .logo{font-family:"Fraunces",serif;font-weight:600;font-size:26px;letter-spacing:-.02em;}
+  .logo .amp{color:var(--clay);font-style:italic;}
+  .tag{font-size:13px;color:var(--ink-soft);max-width:420px;text-align:right;}
+
+  .steps{display:flex;gap:6px;margin:18px 0 26px;flex-wrap:wrap;}
+  .pill{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff8;display:flex;align-items:center;gap:7px;}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  .pill.active{color:var(--ink);border-color:var(--clay);background:#fff;}
+  .pill.active .dot{background:var(--clay);}
+  .pill.done .dot{background:var(--olive);}
+
+  .panel{display:none;animation:rise .5s cubic-bezier(.2,.7,.2,1) both;}
+  .panel.show{display:block;}
+  @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+  h1,h2{font-family:"Fraunces",serif;font-weight:600;letter-spacing:-.02em;line-height:1.05;margin:0 0 10px;}
+  h1{font-size:clamp(34px,6vw,56px);}
+  h1 .it{font-style:italic;color:var(--clay);}
+  h2{font-size:clamp(24px,4vw,34px);}
+  .lede{font-size:18px;color:var(--ink-soft);max-width:640px;margin:0 0 26px;}
+  .small{font-size:13px;color:var(--ink-soft);}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:18px;}
+
+  .btn{font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:15px;cursor:pointer;border-radius:10px;border:1px solid var(--ink);
+    background:var(--ink);color:var(--paper);padding:12px 22px;transition:transform .12s ease, box-shadow .2s ease;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px -12px #23201caa;}
+  .btn:active{transform:translateY(0);}
+  .btn.clay{background:var(--clay);border-color:var(--clay-deep);}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+  .btn.sm{padding:8px 14px;font-size:13px;border-radius:8px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .spread{justify-content:space-between;}
+
+  /* Quiz */
+  .q{border-bottom:1px dashed var(--line);padding:16px 0;}
+  .q:last-child{border-bottom:0;}
+  .q .qt{font-family:"Fraunces",serif;font-size:19px;margin-bottom:12px;}
+  .q .qt .n{color:var(--clay);font-style:italic;margin-right:8px;}
+  .likert{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  .likert label{cursor:pointer;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px 6px;background:#fff8;
+    font-size:12.5px;color:var(--ink-soft);transition:.15s;line-height:1.2;user-select:none;}
+  .likert input{position:absolute;opacity:0;pointer-events:none;}
+  .likert label .num{display:block;font-family:"Fraunces",serif;font-size:20px;color:var(--ink);margin-bottom:3px;}
+  .likert label:hover{border-color:var(--clay);}
+  .likert input:checked + label{background:var(--clay);border-color:var(--clay-deep);color:#fff;}
+  .likert input:checked + label .num{color:#fff;}
+  @media(max-width:560px){.likert label{font-size:0;padding:12px 4px;}.likert label .num{font-size:18px;margin:0;}}
+
+  /* Availability */
+  .avail-grid{display:grid;grid-template-columns:90px 1fr;gap:10px 14px;align-items:center;}
+  .day-name{font-weight:600;font-family:"Fraunces",serif;}
+  .windows{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .win{display:flex;gap:6px;align-items:center;background:#fff8;border:1px solid var(--line);border-radius:9px;padding:6px 8px;}
+  .win input[type=time]{font-family:inherit;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;background:#fff;color:var(--ink);}
+  .win .to{color:var(--ink-soft);font-size:13px;}
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);cursor:pointer;}
+  .toggle input{width:16px;height:16px;accent-color:var(--olive);}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+
+  /* Scores */
+  .scorebar{display:grid;grid-template-columns:150px 1fr 54px;gap:12px;align-items:center;margin:10px 0;}
+  .scorebar .lab{font-weight:600;}
+  .track{height:14px;background:var(--paper-2);border-radius:999px;overflow:hidden;border:1px solid var(--line);}
+  .fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--olive-soft),var(--olive));transition:width .9s cubic-bezier(.2,.8,.2,1);}
+  .scorebar.top .fill{background:linear-gradient(90deg,var(--clay),var(--clay-deep));}
+  .scorebar.top .lab{color:var(--clay-deep);}
+  .val{font-family:"Fraunces",serif;text-align:right;}
+
+  .dominant{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;background:linear-gradient(180deg,#fff,#fbf4e7);border:1px solid var(--clay);
+    border-radius:var(--radius);padding:20px;margin:18px 0;}
+  .badge{font-family:"Fraunces",serif;font-style:italic;font-size:13px;color:#fff;background:var(--clay);padding:4px 12px;border-radius:999px;display:inline-block;margin-bottom:8px;letter-spacing:.02em;}
+
+  /* Plans */
+  .plan-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .ptab{cursor:pointer;border:1px solid var(--line);background:#fff8;border-radius:10px;padding:10px 16px;font-weight:600;font-size:14px;color:var(--ink-soft);}
+  .ptab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .planmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;}
+  .metric{background:#fff8;border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  .metric .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .metric .v{font-family:"Fraunces",serif;font-size:18px;margin-top:2px;}
+
+  /* Calendar */
+  .calwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);}
+  .cal{display:grid;grid-template-columns:48px repeat(7,minmax(96px,1fr));min-width:760px;}
+  .cal .corner{border-bottom:1px solid var(--line);}
+  .cal .dh{border-bottom:1px solid var(--line);border-left:1px solid var(--line);padding:8px 6px;text-align:center;font-weight:600;font-size:13px;background:var(--paper-2);}
+  .cal .dh small{display:block;font-weight:400;color:var(--ink-soft);font-size:11px;}
+  .col{position:relative;border-left:1px solid var(--line);}
+  .gutter{position:relative;}
+  .hourlab{height:38px;font-size:10.5px;color:var(--ink-soft);text-align:right;padding-right:5px;transform:translateY(-7px);}
+  .hourline{height:38px;border-bottom:1px solid #e7dcc6;}
+  .availblock{position:absolute;left:2px;right:2px;background:repeating-linear-gradient(45deg,#e9efe0,#e9efe0 6px,#eef3e6 6px,#eef3e6 12px);border-radius:6px;}
+  .event{position:absolute;left:3px;right:3px;border-radius:8px;padding:5px 6px;color:#fff;font-size:11px;overflow:hidden;cursor:pointer;box-shadow:0 6px 14px -8px #0006;border:1px solid #0002;}
+  .event.aerobic{background:linear-gradient(180deg,var(--olive-soft),var(--olive));}
+  .event.strength{background:linear-gradient(180deg,#b9603f,var(--clay-deep));}
+  .event .et{font-weight:700;line-height:1.15;}
+  .event .es{opacity:.92;font-size:10px;}
+  .offtag{display:inline-block;margin-top:2px;font-size:9px;background:#ffffff33;border-radius:4px;padding:1px 4px;}
+
+  /* Editor list */
+  table.edit{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}
+  table.edit th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);padding:6px 8px;border-bottom:1px solid var(--line);}
+  table.edit td{padding:6px 8px;border-bottom:1px dashed var(--line);}
+  table.edit select,table.edit input{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:7px;padding:5px 6px;background:#fff;color:var(--ink);}
+  .del{color:var(--clay-deep);cursor:pointer;font-weight:700;border:none;background:none;font-size:16px;}
+  .legend{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--ink-soft);margin:12px 0 4px;flex-wrap:wrap;}
+  .swatch{width:14px;height:14px;border-radius:4px;display:inline-block;vertical-align:-2px;margin-right:5px;}
+  .disc{font-size:12px;color:var(--ink-soft);border-left:3px solid var(--olive-soft);padding:8px 12px;background:#fff6;border-radius:0 8px 8px 0;margin-top:14px;}
+  a.gcal{font-size:13px;color:var(--clay-deep);text-decoration:none;border-bottom:1px solid var(--clay);}
+  .err{color:var(--clay-deep);font-size:13px;margin-top:6px;}
+  footer{margin-top:34px;font-size:12px;color:var(--ink-soft);text-align:center;}
+  footer .it{font-family:"Fraunces",serif;font-style:italic;}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+  <header class="brand">
+    <div class="logo">Trait <span class="amp">&amp;</span> Train</div>
+    <div class="tag">A workout schedule tuned to your Big Five personality, your calendar, and the evidence.</div>
+  </header>
+
+  <div class="steps" id="steps">
+    <span class="pill active" data-s="0"><span class="dot"></span>Welcome</span>
+    <span class="pill" data-s="1"><span class="dot"></span>Personality</span>
+    <span class="pill" data-s="2"><span class="dot"></span>Availability</span>
+    <span class="pill" data-s="3"><span class="dot"></span>Your profile</span>
+    <span class="pill" data-s="4"><span class="dot"></span>Your plan</span>
+  </div>
+
+  <!-- STEP 0 -->
+  <section class="panel show" id="p0">
+    <h1>Train with the<br><span class="it">grain</span> of your personality.</h1>
+    <p class="lede">Answer ten quick questions, tell us when you're free, and we'll build two editable weekly workout plans — number of days, time of day, session length, and exercise type — shaped by your dominant Big Five trait.</p>
+    <div class="card">
+      <p class="small" style="margin-top:0">Built on the <strong>BFI-10</strong> (Rammstedt &amp; John, 2007), and on a study of personality &amp; exercise habits in college students, cross-referenced with the broader literature (Rhodes &amp; Smith 2006; Wilson &amp; Dishman 2015; Sutin et al. 2016; Ronca et al. 2025; and others). Every recommendation is a transparent, editable starting point — not a prescription.</p>
+    </div>
+    <button class="btn clay" onclick="go(1)">Start the quiz →</button>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" id="p1">
+    <h2>How well do these describe you?</h2>
+    <p class="lede">I see myself as someone who… &nbsp;<span class="small">(1 = disagree strongly · 5 = agree strongly)</span></p>
+    <div class="card" id="quiz"></div>
+    <div class="err" id="quizErr"></div>
+    <div class="row spread">
+      <button class="btn ghost" onclick="go(0)">← Back</button>
+      <button class="btn clay" onclick="submitQuiz()">See my availability step →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" id="p2">
+    <h2>When are you free to move?</h2>
+    <p class="lede">Toggle each day on or off and set the time window(s) you could realistically train. Use a preset to start fast.</p>
+    <div class="presets" id="presets"></div>
+    <div class="card"><div class="avail-grid" id="availGrid"></div></div>
+    <div class="err" id="availErr"></div>
+    <div class="row spread">
+      <button class="btn ghost" onclick="go(1)">← Back</button>
+      <button class="btn clay" onclick="submitAvail()">Build my profile →</button>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" id="p3">
+    <h2>Your Big Five profile</h2>
+    <p class="lede">Each trait is scored 1–5 from your answers. Your highest trait drives the plan.</p>
+    <div class="card" id="scores"></div>
+    <div class="dominant" id="dominantBox"></div>
+    <div class="row spread">
+      <button class="btn ghost" onclick="go(2)">← Edit availability</button>
+      <button class="btn clay" onclick="buildAndShowPlans()">Generate my plans →</button>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="panel" id="p4">
+    <h2>Your weekly plan</h2>
+    <p class="lede" id="planLede"></p>
+    <div class="plan-tabs">
+      <div class="ptab active" id="tab1" onclick="setPlan(1)">★ Most optimal</div>
+      <div class="ptab" id="tab2" onclick="setPlan(2)">Second option</div>
+    </div>
+    <div class="planmeta" id="planMeta"></div>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:linear-gradient(180deg,var(--olive-soft),var(--olive))"></span>Aerobic</span>
+      <span><span class="swatch" style="background:linear-gradient(180deg,#b9603f,var(--clay-deep))"></span>Strength</span>
+      <span><span class="swatch availblock" style="height:14px;width:18px"></span>Your free time</span>
+      <span class="small">Tip: edit any session below — the calendar updates live.</span>
+    </div>
+
+    <div class="calwrap"><div class="cal" id="cal"></div></div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="row spread" style="margin-bottom:6px">
+        <strong style="font-family:'Fraunces',serif;font-size:18px">Adjust your sessions</strong>
+        <button class="btn ghost sm" onclick="addSession()">+ Add session</button>
+      </div>
+      <div style="overflow-x:auto"><table class="edit" id="editTbl"></table></div>
+    </div>
+
+    <div class="card">
+      <strong style="font-family:'Fraunces',serif;font-size:18px">Export to your calendar</strong>
+      <p class="small">Download an <strong>.ics</strong> file (weekly-recurring events) and import it into Google Calendar, Apple Calendar, or Outlook — or add sessions one by one with the Google links.</p>
+      <div class="row">
+        <button class="btn clay sm" onclick="downloadICS()">⬇ Download .ics (recurring week)</button>
+      </div>
+      <div id="gcalLinks" style="margin-top:12px;line-height:2.1"></div>
+    </div>
+
+    <div class="disc" id="disc"></div>
+
+    <div class="row spread" style="margin-top:16px">
+      <button class="btn ghost" onclick="go(3)">← Back to profile</button>
+      <button class="btn" onclick="window.print()">Print / save as PDF</button>
+    </div>
+  </section>
+
+  <footer>
+    Trait <span class="it">&amp;</span> Train · a heuristic planner, not medical or fitness advice · listen to your body and consult a professional before starting a new program.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   1. BFI-10 ITEMS + SCORING  (Rammstedt & John, 2007)
+   ============================================================ */
+const ITEMS = [
+  {t:"is reserved",                    trait:"E", rev:true },
+  {t:"is generally trusting",          trait:"A", rev:false},
+  {t:"tends to be lazy",               trait:"C", rev:true },
+  {t:"is relaxed, handles stress well",trait:"N", rev:true },
+  {t:"has few artistic interests",     trait:"O", rev:true },
+  {t:"is outgoing, sociable",          trait:"E", rev:false},
+  {t:"tends to find fault with others",trait:"A", rev:true },
+  {t:"does a thorough job",            trait:"C", rev:false},
+  {t:"gets nervous easily",            trait:"N", rev:false},
+  {t:"has an active imagination",      trait:"O", rev:false},
+];
+const TRAITS = {
+  E:"Extraversion", A:"Agreeableness", C:"Conscientiousness",
+  N:"Neuroticism",  O:"Openness"
+};
+
+/* ============================================================
+   2. RECOMMENDATION RULES  (your sorting + literature)
+   Each value is editable — change a number to change behaviour.
+   strengthRatio = share of weekly sessions that are Strength.
+   ============================================================ */
+const REC = {
+  E:{
+    days:3, sessionMin:30, strengthRatio:0.4,
+    timePrimary:"evening", timeAlt:"afternoon",
+    aerobic:["Running","Walking"], strength:["Weightlifting","HIIT"],
+    avoid:"Swimming",
+    why:"In the study sample, extraversion was negatively correlated with both exercise frequency (r=−.40, p=.017) and session length (r=−.40, p=.017) — extraverted students tended to do fewer, shorter sessions, likely squeezed by busy social and academic schedules. Group means leaned toward evening/afternoon and toward running/walking over swimming. Note: the broader meta-analytic literature finds extraversion *positively* linked to activity, so a realistic 'few short sessions' plan here is about fit, not a ceiling — feel free to add days."
+  },
+  A:{
+    days:4, sessionMin:40, strengthRatio:0.25,
+    timePrimary:"evening", timeAlt:"afternoon",
+    aerobic:["Running","Swimming"], strength:["Weightlifting"],
+    avoid:null,
+    why:"Agreeableness showed a significant lean toward aerobic over strength training (ANOVA F=4.69, p=.037; aerobic exercisers scored ~0.65 higher). Frequency and length were not significantly related (so a moderate 4 days is a balanced default). Means favored afternoon/evening and running/swimming. This aerobic tilt is a novel finding — most prior work reports no agreeableness–activity link — so treat it as exploratory."
+  },
+  C:{
+    days:5, sessionMin:45, strengthRatio:0.5,
+    timePrimary:"morning", timeAlt:"evening",
+    aerobic:["Running"], strength:["Weightlifting"],
+    avoid:null,
+    why:"Conscientiousness was statistically null across every measure in the study sample — but it's the most robust positive predictor of physical activity in the wider literature (Sutin 2016; Wilson & Dishman 2015; Muller 2023; Ronca 2025). Conscientious people sustain structured routines, so the plan leans into frequency (5 days), a steady time block, and a balanced mix you can keep."
+  },
+  N:{
+    days:3, sessionMin:35, strengthRatio:0.6,
+    timePrimary:"night", timeAlt:"midday",
+    aerobic:["Walking","Running"], strength:["Weightlifting"],
+    avoid:null,
+    setting:"Lean toward individual / private settings — in the sample, higher neuroticism predicted solo over multi-setting exercise (p=.009).",
+    why:"Neuroticism was the cleanest finding: a strong negative correlation with exercise days/week (r=−.51, p=.001), matching decades of literature. So the plan keeps frequency gentle (3 days) and time-of-day flexible (night/midday, per group means), with a strength lean drawn from your sorting. Worth knowing: Ronca et al. (2025) found high-neuroticism people get the *most* stress-reduction benefit from aerobic training, so swapping toward aerobic is well-justified if stress relief is your goal."
+  },
+  O:{
+    days:4, sessionMin:45, strengthRatio:0.4,
+    timePrimary:"morning", timeAlt:"midday",
+    aerobic:["Running","Yoga"], strength:["Weightlifting"],
+    avoid:null,
+    why:"Openness showed a significant tilt toward morning workouts (preferred-time ANOVA F=2.80, p=.042; lower odds of afternoon/night). Frequency and length weren't significantly related, so a flexible, variety-friendly 4 days fits the trait's appetite for novelty. The morning result was tentative (no surviving pairwise contrast), so the time block is a suggestion, not a rule."
+  }
+};
+
+/* Canonical time-of-day blocks (minutes from midnight) */
+const BLOCKS = {
+  morning:{label:"morning",   start:6*60,  end:9*60},
+  midday: {label:"midday",    start:11*60, end:14*60},
+  afternoon:{label:"afternoon",start:14*60,end:17*60},
+  evening:{label:"evening",   start:17*60, end:20*60},
+  night:  {label:"night",     start:20*60, end:23*60},
+};
+
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DAYFULL = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+/* ============================================================
+   3. STATE
+   ============================================================ */
+const state = {
+  answers:new Array(10).fill(null),
+  avail:DAYS.map(()=>({on:false,windows:[]})),
+  scores:{}, dominant:null, sorted:[],
+  plans:{1:[],2:[]}, active:1
+};
+
+/* ============================================================
+   4. NAVIGATION
+   ============================================================ */
+function go(s){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("show"));
+  document.getElementById("p"+s).classList.add("show");
+  document.querySelectorAll("#steps .pill").forEach(p=>{
+    const idx=+p.dataset.s;
+    p.classList.toggle("active", idx===s);
+    p.classList.toggle("done", idx<s);
+  });
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ============================================================
+   5. QUIZ UI
+   ============================================================ */
+const LIK=["Disagree strongly","Disagree a little","Neither","Agree a little","Agree strongly"];
+function renderQuiz(){
+  const q=document.getElementById("quiz");
+  q.innerHTML=ITEMS.map((it,i)=>`
+    <div class="q">
+      <div class="qt"><span class="n">${i+1}.</span>… ${it.t}</div>
+      <div class="likert">
+        ${[1,2,3,4,5].map(v=>`
+          <input type="radio" name="q${i}" id="q${i}_${v}" value="${v}" ${state.answers[i]===v?"checked":""} onchange="state.answers[${i}]=${v}">
+          <label for="q${i}_${v}"><span class="num">${v}</span>${LIK[v-1]}</label>
+        `).join("")}
+      </div>
+    </div>`).join("");
+}
+function submitQuiz(){
+  const missing=state.answers.findIndex(a=>a===null);
+  if(missing!==-1){
+    document.getElementById("quizErr").textContent=`Please answer question ${missing+1} before continuing.`;
+    return;
+  }
+  document.getElementById("quizErr").textContent="";
+  go(2);
+}
+
+/* ============================================================
+   6. AVAILABILITY UI
+   ============================================================ */
+function timeToMin(t){const[h,m]=t.split(":").map(Number);return h*60+m;}
+function minToTime(m){const h=Math.floor(m/60),mm=m%60;return String(h).padStart(2,"0")+":"+String(mm).padStart(2,"0");}
+function min12(m){let h=Math.floor(m/60),mm=m%60,ap=h>=12?"pm":"am";let hh=h%12;if(hh===0)hh=12;return hh+(mm?":"+String(mm).padStart(2,"0"):"")+ap;}
+
+const PRESETS={
+  "9–5 worker":   d=>d<5?[["07:00","08:00"],["17:30","20:30"]]:[["08:00","12:00"]],
+  "Student":      d=>d<5?[["12:00","14:00"],["18:00","21:00"]]:[["10:00","14:00"]],
+  "Early bird":   d=>[["06:00","08:00"]],
+  "Flexible":     d=>[["06:00","21:00"]],
+  "Clear all":    d=>null
+};
+function renderPresets(){
+  document.getElementById("presets").innerHTML=Object.keys(PRESETS).map(k=>
+    `<button class="btn ghost sm" onclick="applyPreset('${k}')">${k}</button>`).join("");
+}
+function applyPreset(k){
+  const fn=PRESETS[k];
+  state.avail=DAYS.map((_,d)=>{
+    const w=fn(d);
+    return w? {on:true,windows:w.map(([s,e])=>({s:timeToMin(s),e:timeToMin(e)}))} : {on:false,windows:[]};
+  });
+  renderAvail();
+}
+function renderAvail(){
+  const g=document.getElementById("availGrid");
+  g.innerHTML="";
+  DAYS.forEach((d,i)=>{
+    const a=state.avail[i];
+    const left=document.createElement("div");
+    left.innerHTML=`<label class="toggle"><input type="checkbox" ${a.on?"checked":""} onchange="toggleDay(${i},this.checked)"> <span class="day-name">${d}</span></label>`;
+    const right=document.createElement("div");
+    right.className="windows";
+    if(a.on){
+      if(a.windows.length===0)a.windows.push({s:7*60,e:8*60});
+      a.windows.forEach((w,wi)=>{
+        const el=document.createElement("div");el.className="win";
+        el.innerHTML=`<input type="time" value="${minToTime(w.s)}" onchange="setWin(${i},${wi},'s',this.value)">
+          <span class="to">→</span>
+          <input type="time" value="${minToTime(w.e)}" onchange="setWin(${i},${wi},'e',this.value)">
+          ${a.windows.length>1?`<button class="del" title="remove" onclick="rmWin(${i},${wi})">×</button>`:""}`;
+        right.appendChild(el);
+      });
+      const add=document.createElement("button");add.className="btn ghost sm";add.textContent="+ window";
+      add.onclick=()=>{a.windows.push({s:17*60,e:19*60});renderAvail();};
+      right.appendChild(add);
+    }else{
+      right.innerHTML=`<span class="small">— rest day —</span>`;
+    }
+    g.appendChild(left);g.appendChild(right);
+  });
+}
+function toggleDay(i,on){state.avail[i].on=on;if(on&&state.avail[i].windows.length===0)state.avail[i].windows=[{s:7*60,e:8*60}];renderAvail();}
+function setWin(i,wi,k,v){state.avail[i].windows[wi][k]=timeToMin(v);}
+function rmWin(i,wi){state.avail[i].windows.splice(wi,1);renderAvail();}
+
+function submitAvail(){
+  const anyDay=state.avail.some(a=>a.on&&a.windows.length);
+  if(!anyDay){document.getElementById("availErr").textContent="Pick at least one day with a time window.";return;}
+  // validate windows
+  for(let i=0;i<7;i++){
+    for(const w of state.avail[i].windows){
+      if(w.e<=w.s){document.getElementById("availErr").textContent=`On ${DAYFULL[i]}, an end time is not after its start time.`;return;}
+    }
+  }
+  document.getElementById("availErr").textContent="";
+  computeScores();
+  go(3);
+}
+
+/* ============================================================
+   7. SCORING
+   ============================================================ */
+function computeScores(){
+  const acc={E:[],A:[],C:[],N:[],O:[]};
+  ITEMS.forEach((it,i)=>{
+    let v=state.answers[i];
+    if(it.rev)v=6-v;
+    acc[it.trait].push(v);
+  });
+  const s={};
+  for(const k in acc)s[k]=acc[k].reduce((a,b)=>a+b,0)/acc[k].length; // 1..5
+  state.scores=s;
+  state.sorted=Object.keys(s).sort((a,b)=>s[b]-s[a]);
+  state.dominant=state.sorted[0];
+  renderScores();
+}
+function renderScores(){
+  const s=state.scores;
+  document.getElementById("scores").innerHTML=state.sorted.map((k,idx)=>{
+    const pct=Math.round((s[k]-1)/4*100);
+    return `<div class="scorebar ${idx===0?"top":""}">
+      <div class="lab">${TRAITS[k]}</div>
+      <div class="track"><div class="fill" style="width:0%" data-w="${pct}"></div></div>
+      <div class="val">${s[k].toFixed(2)}</div>
+    </div>`;
+  }).join("");
+  requestAnimationFrame(()=>document.querySelectorAll("#scores .fill").forEach(f=>f.style.width=f.dataset.w+"%"));
+  const d=state.dominant, r=REC[d];
+  document.getElementById("dominantBox").innerHTML=`
+    <div style="flex:1;min-width:240px">
+      <span class="badge">Your dominant trait</span>
+      <h2 style="margin:.1em 0">${TRAITS[d]}</h2>
+      <p class="small" style="margin:.4em 0 0">${r.why}</p>
+      ${r.setting?`<p class="small" style="margin:.6em 0 0"><strong>Setting:</strong> ${r.setting}</p>`:""}
+    </div>`;
+}
+
+/* ============================================================
+   8. SCHEDULING ENGINE
+   ============================================================ */
+function fitInWindow(win, block, len){
+  // returns a start minute if a session of `len` fits at/after block.start within window, else null
+  const s=Math.max(win.s, block.start);
+  if(s+len<=win.e && s<=block.end) return s;
+  // allow starting at window start if block earlier than window but still near
+  if(win.s+len<=win.e && win.s<=block.end && win.s>=block.start) return win.s;
+  return null;
+}
+function anyFit(win,len){ if(win.e-win.s>=len) return win.s; return null; }
+
+function buildPlan(variant){
+  const d=state.dominant, r=REC[d];
+  const block=BLOCKS[variant===1?r.timePrimary:r.timeAlt];
+  const N=r.days;
+  // 1. eligible days at ideal block
+  let ideal=[], other=[];
+  for(let i=0;i<7;i++){
+    const a=state.avail[i]; if(!a.on)continue;
+    let placed=null;
+    for(const w of a.windows){const st=fitInWindow(w,block,r.sessionMin);if(st!==null){placed=st;break;}}
+    if(placed!==null){ideal.push({day:i,start:placed,off:false});}
+    else{
+      // any window that fits length
+      for(const w of a.windows){const st=anyFit(w,r.sessionMin);if(st!==null){other.push({day:i,start:st,off:true});break;}}
+    }
+  }
+  // 2. spread selection across the week
+  function spread(list,n){
+    if(list.length<=n)return list.slice();
+    const out=[],L=list.length;
+    for(let i=0;i<n;i++){out.push(list[Math.round(i*(L-1)/(n-1))]);}
+    return [...new Map(out.map(o=>[o.day,o])).values()];
+  }
+  let chosen=spread(ideal,N);
+  if(chosen.length<N){
+    const need=N-chosen.length;
+    const extra=spread(other.filter(o=>!chosen.some(c=>c.day===o.day)),need);
+    chosen=chosen.concat(extra);
+  }
+  chosen.sort((a,b)=>a.day-b.day);
+  // for variant 2, rotate the day pattern slightly for variety
+  if(variant===2 && chosen.length>1){ chosen.push(chosen.shift()); chosen.sort((a,b)=>a.day-b.day); }
+
+  // 3. assign types
+  const strengthCount=Math.round(chosen.length*r.strengthRatio);
+  const sessions=chosen.map((c,idx)=>{
+    const isStrength = idx < strengthCount;
+    const pool = isStrength ? r.strength : r.aerobic;
+    const specific = pool[idx % pool.length];
+    return {
+      id:"s"+variant+"_"+idx+"_"+c.day,
+      day:c.day, start:c.start, len:r.sessionMin,
+      broad: isStrength?"Strength":"Aerobic",
+      specific, off:c.off
+    };
+  });
+  // alternate strength/aerobic order so they interleave (rest-friendly)
+  sessions.sort((a,b)=>a.day-b.day);
+  return sessions;
+}
+
+function buildAndShowPlans(){
+  state.plans[1]=buildPlan(1);
+  state.plans[2]=buildPlan(2);
+  state.active=1;
+  renderPlanUI();
+  go(4);
+}
+
+/* ============================================================
+   9. PLAN UI + CALENDAR
+   ============================================================ */
+const CAL_START=6*60, CAL_END=23*60, HOUR_H=38;
+function setPlan(p){state.active=p;
+  document.getElementById("tab1").classList.toggle("active",p===1);
+  document.getElementById("tab2").classList.toggle("active",p===2);
+  renderPlanUI();
+}
+function curr(){return state.plans[state.active];}
+
+function renderPlanUI(){
+  const d=state.dominant,r=REC[d],plan=curr();
+  const block=BLOCKS[state.active===1?r.timePrimary:r.timeAlt];
+  document.getElementById("planLede").innerHTML=
+    `Two starting plans tuned to <strong>${TRAITS[d]}</strong> and your free time. The starred plan uses your trait's primary time block (<strong>${block.label}</strong>); edit anything below.`;
+
+  const strengthN=plan.filter(s=>s.broad==="Strength").length;
+  const aerobicN=plan.length-strengthN;
+  const avgLen=plan.length?Math.round(plan.reduce((a,s)=>a+s.len,0)/plan.length):0;
+  document.getElementById("planMeta").innerHTML=`
+    <div class="metric"><div class="k">Days / week</div><div class="v">${plan.length}</div></div>
+    <div class="metric"><div class="k">Time of day</div><div class="v">${block.label}</div></div>
+    <div class="metric"><div class="k">Session length</div><div class="v">${avgLen} min</div></div>
+    <div class="metric"><div class="k">Broad split</div><div class="v">${aerobicN}× aero · ${strengthN}× str</div></div>
+    <div class="metric"><div class="k">Specific</div><div class="v" style="font-size:14px">${[...new Set(plan.map(s=>s.specific))].join(", ")||"—"}</div></div>`;
+
+  renderCalendar();
+  renderEditor();
+  renderGcalLinks();
+  document.getElementById("disc").innerHTML=
+    `<strong>Read me:</strong> These plans come from a small college-student study (n≈37, mostly null results) blended with the wider literature, so they're directional, not personalized medical advice. Frequency &amp; length are correlational; "best time of day" mostly reflects group means/preferences. Start conservative, progress gradually, and adjust the sessions below to fit your body and life.`;
+}
+
+function renderCalendar(){
+  const cal=document.getElementById("cal");
+  const hours=(CAL_END-CAL_START)/60;
+  let html=`<div class="corner"></div>`;
+  DAYS.forEach((d,i)=>html+=`<div class="dh">${d}<small>${state.avail[i].on?"free":"rest"}</small></div>`);
+  // gutter
+  html+=`<div class="gutter">`;
+  for(let h=0;h<hours;h++){html+=`<div class="hourlab">${min12((CAL_START+h*60))}</div>`;}
+  html+=`</div>`;
+  const plan=curr();
+  for(let i=0;i<7;i++){
+    html+=`<div class="col" id="col${i}">`;
+    for(let h=0;h<hours;h++)html+=`<div class="hourline"></div>`;
+    // availability shading
+    if(state.avail[i].on){
+      state.avail[i].windows.forEach(w=>{
+        const top=Math.max(0,(w.s-CAL_START)/60*HOUR_H);
+        const bot=Math.min(hours*HOUR_H,(w.e-CAL_START)/60*HOUR_H);
+        if(bot>top)html+=`<div class="availblock" style="top:${top}px;height:${bot-top}px"></div>`;
+      });
+    }
+    // events
+    plan.filter(s=>s.day===i).forEach(s=>{
+      const top=(s.start-CAL_START)/60*HOUR_H;
+      const h=Math.max(20,s.len/60*HOUR_H);
+      html+=`<div class="event ${s.broad.toLowerCase()}" style="top:${top}px;height:${h}px" title="${s.specific}">
+        <div class="et">${s.specific}</div>
+        <div class="es">${min12(s.start)} · ${s.len}m · ${s.broad}</div>
+        ${s.off?`<span class="offtag">off-ideal time</span>`:""}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  cal.innerHTML=html;
+}
+
+/* ============================================================
+   10. EDITOR (adjustable sessions)
+   ============================================================ */
+const SPECIFICS=["Running","Swimming","Biking","Walking","Yoga","Weightlifting","Dance/Zumba","Rowing","HIIT","Hybrid (2+ types)"];
+function renderEditor(){
+  const plan=curr();
+  let html=`<tr><th>Day</th><th>Start</th><th>Length</th><th>Broad</th><th>Specific</th><th></th></tr>`;
+  plan.forEach((s,idx)=>{
+    html+=`<tr>
+      <td><select onchange="editSess(${idx},'day',+this.value)">${DAYS.map((d,di)=>`<option value="${di}" ${di===s.day?"selected":""}>${d}</option>`).join("")}</select></td>
+      <td><input type="time" value="${minToTime(s.start)}" onchange="editSess(${idx},'start',timeToMin(this.value))"></td>
+      <td><input type="number" min="10" max="180" step="5" value="${s.len}" style="width:64px" onchange="editSess(${idx},'len',Math.max(10,+this.value))"> min</td>
+      <td><select onchange="editSess(${idx},'broad',this.value)">${["Aerobic","Strength"].map(b=>`<option ${b===s.broad?"selected":""}>${b}</option>`).join("")}</select></td>
+      <td><select onchange="editSess(${idx},'specific',this.value)">${SPECIFICS.map(sp=>`<option ${sp===s.specific?"selected":""}>${sp}</option>`).join("")}</select></td>
+      <td><button class="del" title="delete" onclick="delSess(${idx})">×</button></td>
+    </tr>`;
+  });
+  document.getElementById("editTbl").innerHTML=html;
+}
+function editSess(idx,k,v){curr()[idx][k]=v;if(k==="broad"){/*keep specific*/}curr()[idx].off=false;renderCalendar();renderEditor();renderGcalLinks();updateMeta();}
+function delSess(idx){curr().splice(idx,1);renderPlanUI();}
+function addSession(){
+  const d=state.dominant,r=REC[d];
+  // first available day not already used
+  const used=curr().map(s=>s.day);
+  let day=0,start=8*60;
+  for(let i=0;i<7;i++){if(state.avail[i].on){if(!used.includes(i)){day=i;break;}day=i;}}
+  if(state.avail[day].windows[0])start=state.avail[day].windows[0].s;
+  curr().push({id:"manual"+Date.now(),day,start,len:r.sessionMin,broad:"Aerobic",specific:r.aerobic[0],off:false});
+  curr().sort((a,b)=>a.day-b.day);
+  renderPlanUI();
+}
+function updateMeta(){ // lightweight refresh of metric strip after edits
+  const plan=curr();const strengthN=plan.filter(s=>s.broad==="Strength").length;
+  // re-run full render to keep it simple
+  renderPlanUI();
+}
+
+/* ============================================================
+   11. EXPORT — .ics + Google Calendar links
+   ============================================================ */
+function weekDates(){
+  // Monday of the current week -> array of 7 Date objects
+  const now=new Date();
+  const dow=(now.getDay()+6)%7; // Mon=0
+  const mon=new Date(now); mon.setDate(now.getDate()-dow); mon.setHours(0,0,0,0);
+  return DAYS.map((_,i)=>{const dt=new Date(mon);dt.setDate(mon.getDate()+i);return dt;});
+}
+function fmtLocal(dt,min){
+  const d=new Date(dt); d.setHours(Math.floor(min/60),min%60,0,0);
+  const p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"T"+p(d.getHours())+p(d.getMinutes())+"00";
+}
+function planTitle(s){return `${s.specific} (${s.broad})`;}
+function downloadICS(){
+  const wd=weekDates();const plan=curr();
+  let ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Trait & Train//EN","CALSCALE:GREGORIAN"];
+  plan.forEach((s,i)=>{
+    const start=fmtLocal(wd[s.day],s.start);
+    const end=fmtLocal(wd[s.day],s.start+s.len);
+    ics.push("BEGIN:VEVENT");
+    ics.push("UID:traintrain-"+state.active+"-"+i+"-"+Date.now()+"@local");
+    ics.push("DTSTART:"+start);
+    ics.push("DTEND:"+end);
+    ics.push("RRULE:FREQ=WEEKLY");
+    ics.push("SUMMARY:"+planTitle(s).replace(/,/g,"\\,"));
+    ics.push("DESCRIPTION:Trait & Train — plan for "+TRAITS[state.dominant]);
+    ics.push("END:VEVENT");
+  });
+  ics.push("END:VCALENDAR");
+  const blob=new Blob([ics.join("\r\n")],{type:"text/calendar"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="trait-and-train-plan.ics";
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+function gcalUrl(s){
+  const wd=weekDates();
+  const start=fmtLocal(wd[s.day],s.start), end=fmtLocal(wd[s.day],s.start+s.len);
+  const params=new URLSearchParams({
+    action:"TEMPLATE",
+    text:planTitle(s),
+    dates:start+"/"+end,
+    details:"Trait & Train — "+TRAITS[state.dominant]+" plan",
+    recur:"RRULE:FREQ=WEEKLY"
+  });
+  return "https://calendar.google.com/calendar/render?"+params.toString();
+}
+function renderGcalLinks(){
+  const plan=curr();
+  document.getElementById("gcalLinks").innerHTML=plan.map(s=>
+    `<a class="gcal" href="${gcalUrl(s)}" target="_blank" rel="noopener">+ ${DAYFULL[s.day]} · ${min12(s.start)} · ${planTitle(s)}</a>`
+  ).join("<br>") || `<span class="small">No sessions yet.</span>`;
+}
+
+/* ============================================================
+   12. INIT
+   ============================================================ */
+renderQuiz();
+applyPreset("9–5 worker");
+renderPresets();
+</script>
+</body>
+</html>
